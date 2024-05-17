@@ -1,4 +1,5 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -7,7 +8,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Role } from './role.entity';
+import { hashPassword } from 'src/utils';
 
 @Entity({ name: 'users' })
 export class User {
@@ -20,11 +23,17 @@ export class User {
   })
   username: string;
 
+  @Exclude()
   @Column({
     length: 100,
     comment: '密码',
   })
   password: string;
+
+  @BeforeInsert()
+  private hashPassword() {
+    this.password = hashPassword(this.password);
+  }
 
   @Column({
     name: 'nick_name',
@@ -83,4 +92,10 @@ export class User {
     name: 'user_roles',
   })
   roles: Role[];
+
+  constructor(mergeObj?: Partial<User>) {
+    if (mergeObj) {
+      Object.assign(this, mergeObj);
+    }
+  }
 }
