@@ -5,7 +5,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { Observable, tap } from 'rxjs';
 import { MyLogger } from 'src/winston/mylogger';
 import { WINSTON_LOGGER_TOKEN } from 'src/winston/winston.module';

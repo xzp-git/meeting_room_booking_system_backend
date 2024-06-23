@@ -5,4 +5,5 @@ export class UpdateUserPasswordDto extends PickType(RegisterUserDto, [
   'password',
   'captcha',
   'email',
+  'username',
 ]) {}

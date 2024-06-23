@@ -4,17 +4,16 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Response } from 'express';
 import { Observable, map } from 'rxjs';
+import { statusCode } from 'src/status-code';
 
 @Injectable()
 export class FormatResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const res = context.switchToHttp().getResponse<Response>();
     return next
       .handle()
       .pipe(
-        map((data) => ({ code: res.statusCode, message: 'success', data })),
+        map((data) => ({ code: statusCode.success, message: 'success', data })),
       );
   }
 }

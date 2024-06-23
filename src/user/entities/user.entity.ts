@@ -11,18 +11,23 @@ import {
 import { Exclude } from 'class-transformer';
 import { Role } from './role.entity';
 import { hashPassword } from 'src/utils';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 
 @Entity({ name: 'users' })
 export class User {
+  @ApiProperty()
   @PrimaryGeneratedColumn()
   id: number;
 
+  @ApiProperty()
   @Column({
     length: 50,
     comment: '用户名',
+    unique: true,
   })
   username: string;
 
+  @ApiHideProperty()
   @Exclude()
   @Column({
     length: 100,
@@ -40,12 +45,14 @@ export class User {
     length: 50,
     comment: '昵称',
   })
+  @ApiProperty()
   nickName: string;
 
   @Column({
     length: 50,
     comment: '邮箱',
   })
+  @ApiProperty()
   email: string;
 
   @Column({
@@ -53,6 +60,7 @@ export class User {
     comment: '头像',
     nullable: true,
   })
+  @ApiProperty()
   avatar: string;
 
   @Column({
@@ -61,24 +69,28 @@ export class User {
     nullable: true,
     unique: true,
   })
+  @ApiProperty()
   phone: string;
 
   @Column({
     comment: '是否冻结',
-    default: false,
+    default: 0,
   })
-  isFrozen: boolean;
+  @ApiProperty()
+  isFrozen: number;
 
   @Column({
     comment: '是否是管理员',
     default: false,
   })
+  @ApiProperty()
   isAdmin: boolean;
 
   @CreateDateColumn({
     comment: '创建时间',
     name: 'create_time',
   })
+  @ApiProperty()
   createTime: Date;
 
   @UpdateDateColumn({

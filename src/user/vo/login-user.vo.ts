@@ -11,7 +11,7 @@ export interface UserInfo {
 
   phone: string;
 
-  isFrozen: boolean;
+  isFrozen: number;
 
   isAdmin: boolean;
 

@@ -14,6 +14,7 @@ import { WinstonModule } from 'src/winston/winston.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { InvokeRecordInterceptor } from 'src/interceptor';
+import { MeetingRoom, MeetingRoomModule } from 'src/meeting-room';
 @Module({
   controllers: [AppController],
   imports: [
@@ -57,7 +58,7 @@ import { InvokeRecordInterceptor } from 'src/interceptor';
           database: configService.get('mysql_server_database'),
           synchronize: true,
           logging: true,
-          entities: [User, Role, Permission],
+          entities: [User, Role, Permission, MeetingRoom],
           poolSize: 10,
           connectorPackage: 'mysql2',
           extra: {
@@ -80,6 +81,7 @@ import { InvokeRecordInterceptor } from 'src/interceptor';
     UserModule,
     RedisModule,
     EmailModule,
+    MeetingRoomModule,
   ],
   providers: [
     AppService,

@@ -7,13 +7,15 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { Permission } from 'src/user';
 import { REQUIRE_LOGIN } from 'src/utils';
 
-interface JwtUserData {
+export interface JwtUserData {
   userId: number;
   username: string;
+  email: string;
   roles: string[];
   permissions: Permission[];
 }
@@ -35,7 +37,7 @@ export class LoginGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    const httpRequest = context.switchToHttp().getRequest();
+    const httpRequest = context.switchToHttp().getRequest<Request>();
     const requireLogin = this.reflector.getAllAndOverride(REQUIRE_LOGIN, [
       context.getClass(),
       context.getHandler(),

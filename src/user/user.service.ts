@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { Permission, Role, User } from './entities';
 import {
   LoginUserDto,
@@ -15,6 +15,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_LOGGER_TOKEN } from 'src/winston/winston.module';
 import { MyLogger } from 'src/winston/mylogger';
+import { JwtUserData } from 'src/guard';
 
 @Injectable()
 export class UserService {
@@ -39,11 +40,12 @@ export class UserService {
   @Inject(WINSTON_LOGGER_TOKEN)
   private readonly logger: MyLogger;
 
-  async findUserByCondition(condition: Partial<User>) {
+  async findUserByCondition(condition: Partial<User>, select?: any) {
     const user = await this.userRepository.findOne({
       where: {
         ...condition,
       },
+      select,
       relations: ['roles', 'roles.permissions'],
     });
 
@@ -88,12 +90,12 @@ export class UserService {
     if (captcha !== user.captcha) {
       throw new HttpException('验证码错误', HttpStatus.BAD_REQUEST);
     }
-    const foundUser = await this.userRepository.findOneBy({
-      email: user.email,
-    });
-    if (foundUser) {
-      throw new HttpException('用户名已存在', HttpStatus.BAD_REQUEST);
-    }
+    // const foundUser = await this.userRepository.findOneBy({
+    //   email: user.email,
+    // });
+    // if (foundUser) {
+    //   throw new HttpException('用户名已存在', HttpStatus.BAD_REQUEST);
+    // }
     const newUser = new User({
       username: user.username,
       password: user.password,
@@ -116,7 +118,7 @@ export class UserService {
     if (userInfo.password !== hashPassword(loginUser.password)) {
       throw new HttpException('密码错误', HttpStatus.BAD_REQUEST);
     }
-
+    delete userInfo.password;
     const tokenMap = this.signToken(userInfo);
     const vo = new LoginUserVo({
       userInfo,
@@ -125,7 +127,7 @@ export class UserService {
     return vo;
   }
 
-  async updatePassword(userId: number, passwordDto: UpdateUserPasswordDto) {
+  async updatePassword(passwordDto: UpdateUserPasswordDto) {
     const captcha = await this.redisService.get(`captcha_${passwordDto.email}`);
 
     if (!captcha) {
@@ -136,13 +138,15 @@ export class UserService {
       throw new HttpException('验证码不正确', HttpStatus.BAD_REQUEST);
     }
 
+    const foundUser = await this.userRepository.findOneBy({
+      username: passwordDto.username,
+    });
+    if (foundUser?.email !== passwordDto.email) {
+      throw new HttpException('邮箱不正确', HttpStatus.BAD_REQUEST);
+    }
+    foundUser.password = hashPassword(passwordDto.password);
     try {
-      await this.userRepository.update(
-        { id: userId },
-        {
-          password: hashPassword(passwordDto.password),
-        },
-      );
+      await this.userRepository.save(foundUser);
       return null;
     } catch (error) {
       this.logger.error(error, 'UserService');
@@ -150,9 +154,9 @@ export class UserService {
     }
   }
 
-  async updateUser(userId: number, updateUserDto: UpdateUserDto) {
+  async updateUser(userInfo: JwtUserData, updateUserDto: UpdateUserDto) {
     const captcha = await this.redisService.get(
-      `captcha_${updateUserDto.email}`,
+      `update_user_info_captcha_${userInfo.email}`,
     );
     if (!captcha) {
       throw new HttpException('验证码已失效', HttpStatus.BAD_REQUEST);
@@ -160,18 +164,20 @@ export class UserService {
     if (updateUserDto.captcha !== captcha) {
       throw new HttpException('验证码不正确', HttpStatus.BAD_REQUEST);
     }
-    const user = new User();
+    const foundUser = await this.userRepository.findOneBy({
+      id: userInfo.userId,
+    });
 
     if (updateUserDto.nickName) {
-      user.nickName = updateUserDto.nickName;
+      foundUser.nickName = updateUserDto.nickName;
     }
 
     if (updateUserDto.avatar) {
-      user.avatar = updateUserDto.avatar;
+      foundUser.avatar = updateUserDto.avatar;
     }
 
     try {
-      await this.userRepository.update({ id: userId }, user);
+      await this.userRepository.save(foundUser);
       return null;
     } catch (error) {
       this.logger.error(error, 'UserService');
@@ -184,6 +190,7 @@ export class UserService {
       {
         userId: userInfo.id,
         username: userInfo.username,
+        email: userInfo.email,
         roles: userInfo.roles,
         permissions: userInfo.permissions,
       },
@@ -207,6 +214,50 @@ export class UserService {
       accessToken,
       refreshToken,
     };
+  }
+
+  async freezeUserById(userId: number, freeze: number) {
+    const user = await this.findUserById({ id: userId });
+    user.isFrozen = freeze;
+    await this.userRepository.save(user);
+  }
+
+  async findUserByPage(
+    username: string,
+    nickName: string,
+    email: string,
+    pageNo: number,
+    pageSize: number,
+  ) {
+    const skipConunt = (pageNo - 1) * pageSize;
+    const condition: Record<string, any> = {};
+    if (username) {
+      condition.username = Like(`%${username}%`);
+    }
+    if (nickName) {
+      condition.nickName = Like(`%${nickName}%`);
+    }
+    if (email) {
+      condition.email = Like(`%${email}%`);
+    }
+
+    const [users, total] = await this.userRepository.findAndCount({
+      select: [
+        'id',
+        'username',
+        'nickName',
+        'avatar',
+        'phone',
+        'isFrozen',
+        'isAdmin',
+        'createTime',
+        'email',
+      ],
+      skip: skipConunt,
+      take: pageSize,
+      where: condition,
+    });
+    return { users, total };
   }
 
   async initData() {
