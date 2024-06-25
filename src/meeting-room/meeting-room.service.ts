@@ -1,14 +1,38 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MeetingRoom } from './entities/meeting-room.entity';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
+import { CreateMeetingRoomDto, UpdateMeetingRoomDto } from './dto';
 
 @Injectable()
 export class MeetingRoomService {
   @InjectRepository(MeetingRoom)
   private readonly meetingRoomRepository: Repository<MeetingRoom>;
 
-  async find(pageNo: number, pageSize: number) {
+  async find({
+    pageNo,
+    pageSize,
+    name,
+    capacity,
+    equipment,
+  }: {
+    pageNo: number;
+    pageSize: number;
+    name?: string;
+    capacity?: number;
+    equipment?: string;
+  }) {
+    const condition: Record<string, any> = {};
+
+    if (name) {
+      condition.name = Like(`%${name}%`);
+    }
+    if (equipment) {
+      condition.equipment = Like(`%${equipment}%`);
+    }
+    if (capacity) {
+      condition.capacity = capacity;
+    }
     if (pageNo < 1) {
       throw new BadRequestException('页码不能小于1');
     }
@@ -19,6 +43,7 @@ export class MeetingRoomService {
       {
         skip: skipCount,
         take: pageSize,
+        where: condition,
       },
     );
 
@@ -28,21 +53,47 @@ export class MeetingRoomService {
     };
   }
 
-  create() {
-    return 'This action adds a new meetingRoom';
+  async create(meetingRoomDto: CreateMeetingRoomDto) {
+    const room = await this.meetingRoomRepository.findOneBy({
+      name: meetingRoomDto.name,
+    });
+
+    if (room) {
+      throw new BadRequestException('会议室名字已存在');
+    }
+
+    return this.meetingRoomRepository.insert(meetingRoomDto);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} meetingRoom`;
+  async update(meetingRoomeDto: UpdateMeetingRoomDto) {
+    const meetingRoom = await this.meetingRoomRepository.findOneBy({
+      id: meetingRoomeDto.id,
+    });
+
+    if (!meetingRoom) {
+      throw new BadRequestException('会议室不存在');
+    }
+
+    meetingRoom.capacity = meetingRoomeDto.capacity;
+    meetingRoom.location = meetingRoomeDto.location;
+    meetingRoom.name = meetingRoomeDto.name;
+    if (meetingRoomeDto.description) {
+      meetingRoom.description = meetingRoomeDto.description;
+    }
+    if (meetingRoomeDto.equipment) {
+      meetingRoom.equipment = meetingRoomeDto.equipment;
+    }
+
+    this.meetingRoomRepository.update({ id: meetingRoomeDto.id }, meetingRoom);
   }
 
-  update(id: number) {
-    return `This action updates a #${id} meetingRoom`;
+  async findById(id: number) {
+    return this.meetingRoomRepository.findOneBy({ id });
+  }
+  async remove(id: number) {
+    this.meetingRoomRepository.delete({ id });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} meetingRoom`;
-  }
   initData() {
     const room1 = new MeetingRoom();
     room1.name = '木星';

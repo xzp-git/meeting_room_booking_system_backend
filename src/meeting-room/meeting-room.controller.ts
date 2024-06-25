@@ -1,15 +1,18 @@
 import {
   Controller,
   Get,
-  Patch,
-  Param,
-  Delete,
   Query,
   Inject,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
 } from '@nestjs/common';
 import { MeetingRoomService } from './meeting-room.service';
+import { CreateMeetingRoomDto, UpdateMeetingRoomDto } from './dto';
 
-@Controller('meeting-room')
+@Controller('/api/v1/meeting-room')
 export class MeetingRoomController {
   @Inject(MeetingRoomService)
   private readonly meetingRoomService: MeetingRoomService;
@@ -18,28 +21,38 @@ export class MeetingRoomController {
   async list(
     @Query('pageNo') pageNo: number,
     @Query('pageSize') pageSize: number,
+    @Query('name') name: string,
+    @Query('capacity') capacity: number,
+    @Query('equipment') equipment: string,
   ) {
-    return this.meetingRoomService.find(pageNo, pageSize);
+    return this.meetingRoomService.find({
+      pageNo,
+      pageSize,
+      name,
+      capacity,
+      equipment,
+    });
+  }
+
+  @Post('create')
+  async create(@Body() meetingRoomDto: CreateMeetingRoomDto) {
+    return this.meetingRoomService.create(meetingRoomDto);
+  }
+
+  @Put('update')
+  async update(@Body() meetingRoomDto: UpdateMeetingRoomDto) {
+    await this.meetingRoomService.update(meetingRoomDto);
+    return null;
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.meetingRoomService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string) {
-    return this.meetingRoomService.update(+id);
+  async findOne(@Param('id') id: number) {
+    return this.meetingRoomService.findById(id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.meetingRoomService.remove(+id);
-  }
-
-  @Get('init-data')
-  async initData() {
-    // await this.meetingRoomService.initData();
-    return 'done';
+  async remove(@Param('id') id: number) {
+    await this.meetingRoomService.remove(id);
+    return null;
   }
 }
