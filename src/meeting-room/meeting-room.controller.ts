@@ -8,19 +8,29 @@ import {
   Put,
   Param,
   Delete,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { MeetingRoomService } from './meeting-room.service';
 import { CreateMeetingRoomDto, UpdateMeetingRoomDto } from './dto';
+import { generateParseIntPipe } from 'src/utils';
+import { RequireLogin } from 'src/decorator';
 
 @Controller('/api/v1/meeting-room')
+@RequireLogin()
 export class MeetingRoomController {
   @Inject(MeetingRoomService)
   private readonly meetingRoomService: MeetingRoomService;
 
   @Get('list')
   async list(
-    @Query('pageNo') pageNo: number,
-    @Query('pageSize') pageSize: number,
+    @Query('pageNo', new DefaultValuePipe(1), generateParseIntPipe('pageNo'))
+    pageNo: number,
+    @Query(
+      'pageSize',
+      new DefaultValuePipe(2),
+      generateParseIntPipe('pageSize'),
+    )
+    pageSize: number,
     @Query('name') name: string,
     @Query('capacity') capacity: number,
     @Query('equipment') equipment: string,

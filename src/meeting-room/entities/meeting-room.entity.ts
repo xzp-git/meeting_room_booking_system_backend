@@ -46,9 +46,9 @@ export class MeetingRoom {
 
   @Column({
     comment: '是否被预定',
-    default: false,
+    default: 0,
   })
-  isBooked: boolean;
+  isBooked: number;
 
   @CreateDateColumn({
     comment: '创建时间',
